@@ -14,7 +14,7 @@
 #                                                                                                         98"   
 #                                                                                                       ./"     
 #                                                                                                      ~`
-**(c) Copyright by LTFZP 2025**
+(c) Copyright by LTFZP 2025
 ```     
 Semi-automated toolkit designed to perform targeted WPA3 Transition Mode downgrade attacks
 
