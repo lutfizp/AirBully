@@ -25,6 +25,7 @@ Why the name "Air Bully"?
 In the wireless (air) environment, this tool acts as a "bully" — forcefully manipulating client behavior by leveraging deauthentication and rogue AP tactics. Specifically, it "bullies" WPA3-capable clients into downgrading their security to vulnerable WPA2-PSK connections, opening the door for traditional attacks.
 
 ## Features
+![AirBully](https://github.com/user-attachments/assets/b6f08463-38d9-4ad3-b8fe-e30efada0fe8)
 
 - Automatic wireless interface detection.
 - Initial network scan and ESSID discovery.
@@ -34,6 +35,7 @@ In the wireless (air) environment, this tool acts as a "bully" — forcefully ma
 - Targeted client deauthentication using **aireplay-ng**.
 - Dependency auto-checker with optional auto-installer.
 - Friendly terminal UI and error handling.
+![Airbully](https://github.com/user-attachments/assets/609ab0a3-e6ab-45ed-8cc5-4071eb6011ec)
 
 ---
 
