@@ -15,8 +15,6 @@
                                                                                                        ./"                                                                                                           ~`
 (c) Copyright by LTFZP 2025
 ```     
-Semi-automated toolkit designed to perform targeted WPA3 Transition Mode downgrade attacks
-
 **AirBully** is a semi-automated toolkit designed to perform targeted WPA3 Transition Mode downgrade attacks by deploying Rogue Access Points and inducing deauthentication against clients.
 
 It guides the attacker through scanning, selecting the target, preparing the environment, and executing a full rogue AP operation with minimal manual configuration.
