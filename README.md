@@ -12,7 +12,8 @@
    .~  `%88!` '888*~     R888"     "Y"       ^    "88888hx.+"      `Y"   'YP     ^*888%   ^*888%    "88"  888  
          `"     ""        ""                        ^"**""                         "%       "%            88F  
                                                                                                          98"   
-                                                                                                       ./"                                                                                                           ~`
+                                                                                                       ./"
+                                                                                                      ~`
 (c) Copyright by LTFZP 2025
 ```     
 **AirBully** is a semi-automated toolkit designed to perform targeted WPA3 Transition Mode downgrade attacks by deploying Rogue Access Points and inducing deauthentication against clients.
