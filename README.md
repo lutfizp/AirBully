@@ -35,6 +35,7 @@ In the wireless (air) environment, this tool acts as a "bully" — forcefully ma
 - Targeted client deauthentication using **aireplay-ng**.
 - Dependency auto-checker with optional auto-installer.
 - Friendly terminal UI and error handling.
+
 ![Airbully](https://github.com/user-attachments/assets/609ab0a3-e6ab-45ed-8cc5-4071eb6011ec)
 
 ---
