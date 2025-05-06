@@ -313,25 +313,6 @@ if [ "$wlan_count" -eq 1 ]; then
         exit 1
     fi
 fi
-echo "[*] Disabling interfering services and interfaces..."
-
-# Stop NetworkManager (optional, depending on distro)
-if systemctl is-active --quiet NetworkManager; then
-    echo "[*] Stopping NetworkManager..."
-    sudo systemctl stop NetworkManager
-fi
-
-# Stop wpa_supplicant
-if systemctl is-active --quiet wpa_supplicant; then
-    echo "[*] Stopping wpa_supplicant..."
-    sudo systemctl stop wpa_supplicant
-fi
-
-# Bring down all wireless interfaces (except loopback)
-for iface in $(ls /sys/class/net/ | grep -v lo); do
-    echo "[*] Bringing down interface: $iface"
-    sudo ip link set $iface down
-done
 
 wlan_index=$(get_number_input "Select interface for scanning (number): ")
 TARGET_IFACE="${wlan_list[$wlan_index]}"
@@ -460,6 +441,25 @@ fi
 echo "Rogue AP Interface: $TARGET_AP_IFACE"
 echo "Monitor Interface : $TARGET_MONITOR_IFACE"
 echo "Creating hccapx file: ${TARGET_ESSID}-handshake.hccapx"
+echo "[*] Disabling interfering services and interfaces..."
+
+# Stop NetworkManager (optional, depending on distro)
+if systemctl is-active --quiet NetworkManager; then
+    echo "[*] Stopping NetworkManager..."
+    sudo systemctl stop NetworkManager
+fi
+
+# Stop wpa_supplicant
+if systemctl is-active --quiet wpa_supplicant; then
+    echo "[*] Stopping wpa_supplicant..."
+    sudo systemctl stop wpa_supplicant
+fi
+
+# Bring down all wireless interfaces (except loopback)
+for iface in $(ls /sys/class/net/ | grep -v lo); do
+    echo "[*] Bringing down interface: $iface"
+    sudo ip link set $iface down
+done
 sleep 0.2
 CONFIG_FILE="hostapd-${TARGET_ESSID}.conf"
 echo "Creating configuration file: $CONFIG_FILE"
