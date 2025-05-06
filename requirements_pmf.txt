@@ -1,0 +1,6 @@
+scapy
+pyroute2
+python-dateutil
+cryptography
+matplotlib
+pycryptodome
