@@ -86,6 +86,10 @@ In the wireless (air) environment, this tool acts as a "bully" — forcefully ma
 7. **Capture** handshake or initiate further exploitation.
 
 ---
+![Screenshot 2025-05-07 112154](https://github.com/user-attachments/assets/f71e7fce-6552-489a-a773-7acab17a4cec)
+
+![Screenshot 2025-05-07 112332](https://github.com/user-attachments/assets/1af305d5-ba8a-4821-ae1e-adc79a19e642)
+
 
 ## Current Limitations
 
