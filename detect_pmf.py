@@ -8,19 +8,26 @@ from scapy.all import *
 
 found_aps = {}
 CHANNELS = list(range(1, 14))  # 2.4GHz channels
-HOP_DELAY = 1  # seconds
+HOP_DELAY = 0.5  # reduced from 1 second to 0.5 for faster hopping
 
 def get_monitor_interface_rtl():
     try:
         output = subprocess.check_output(['iwconfig'], stderr=subprocess.DEVNULL).decode()
-        interfaces = re.findall(r'^(\w+)\s+IEEE 802\.11', output, re.MULTILINE)
+        interfaces = re.findall(r'^(\w+)\s+IEEE 802.11', output, re.MULTILINE)
 
         for iface in interfaces:
             if 'rtl8814au' in get_driver_info(iface) and 'Mode:Monitor' in get_interface_info(iface):
                 return iface
+                
+        # If we can't find specifically rtl8814au in monitor mode, find any monitor mode interface
+        for iface in interfaces:
+            if 'Mode:Monitor' in get_interface_info(iface):
+                print(f"[!] RTL8814AU not found, but found alternative monitor interface: {iface}")
+                return iface
+                
         return None
     except Exception as e:
-        print(f"[!] Error mendeteksi interface: {e}")
+        print(f"[!] Error detecting interface: {e}")
         return None
 
 def get_driver_info(iface):
@@ -66,33 +73,55 @@ def parse_pmf(rsn_data):
 
 def handle_packet(pkt):
     if pkt.haslayer(Dot11Beacon) or pkt.haslayer(Dot11ProbeResp):
-        bssid = pkt[Dot11].addr2
-        ssid = pkt[Dot11Elt].info.decode(errors='ignore') if pkt[Dot11Elt].info else "<Hidden>"
-        rsn = pkt.getlayer(Dot11Elt, ID=48)
+        try:
+            bssid = pkt[Dot11].addr2
+            
+            # Extract SSID, handle all exceptions
+            try:
+                if pkt.haslayer(Dot11Elt) and pkt[Dot11Elt].ID == 0:
+                    ssid = pkt[Dot11Elt].info.decode(errors='ignore')
+                else:
+                    for element in pkt.iterpayloads():
+                        if isinstance(element, Dot11Elt) and element.ID == 0:
+                            ssid = element.info.decode(errors='ignore')
+                            break
+                    else:
+                        ssid = "<Hidden>"
+            except:
+                ssid = "<Error Extracting SSID>"
+            
+            # Look for RSN element
+            rsn = None
+            for element in pkt.iterpayloads():
+                if isinstance(element, Dot11Elt) and element.ID == 48:  # 48 is RSN
+                    rsn = element
+                    break
 
-        if bssid not in found_aps:
-            pmf_status = parse_pmf(rsn.info) if rsn else "Tidak ada"
-            found_aps[bssid] = (ssid, pmf_status)
+            if bssid not in found_aps:
+                pmf_status = parse_pmf(rsn.info) if rsn else "Tidak ada"
+                found_aps[bssid] = (ssid, pmf_status)
+                print(f"[+] Found network: {ssid} ({bssid}) - PMF: {pmf_status}")
+        except Exception as e:
+            pass  # Silently handle malformed packets
 
 def print_results():
-    os.system('clear')  # Ganti ke 'cls' jika di Windows
-    print(f"[{time.strftime('%H:%M:%S')}] Hasil scan:")
+    os.system('clear')  # Change to 'cls' if on Windows
+    print(f"[{time.strftime('%H:%M:%S')}] Scan results:")
     print(f"{'SSID':<30} {'MAC Address':<20} {'PMF Status'}")
     print("-" * 70)
     for bssid, (ssid, pmf_status) in found_aps.items():
         print(f"{ssid:<30} {bssid:<20} {pmf_status}")
 
 def main():
-    print("[*] Mendeteksi interface RTL8814AU dalam mode monitor...")
+    print("[*] Detecting monitor mode interface...")
     iface = get_monitor_interface_rtl()
 
     if not iface:
-        print("[!] Tidak ditemukan interface RTL8814AU dalam mode monitor.")
+        print("[!] No monitor mode interface found.")
         sys.exit(1)
 
-    print(f"[+] Menggunakan interface: {iface}")
+    print(f"[+] Using interface: {iface}")
 
-    # Start channel hopping in background
     hopper = threading.Thread(target=channel_hopper, args=(iface,), daemon=True)
     hopper.start()
 
@@ -100,26 +129,65 @@ def main():
         sniff(iface=iface, prn=handle_packet, store=0, timeout=5)
         print_results()
         time.sleep(1)
+
 def scan_once_and_output():
     iface = get_monitor_interface_rtl()
     if not iface:
-        print("ERROR: Interface RTL8814AU tidak ditemukan atau bukan mode monitor.", file=sys.stderr)
+        print("ERROR: Monitor mode interface not found.", file=sys.stderr)
         sys.exit(1)
 
-    # Jalankan hopping sebentar
     hopper = threading.Thread(target=channel_hopper, args=(iface,), daemon=True)
     hopper.start()
 
-    # Scan selama 10 detik
-    sniff(iface=iface, prn=handle_packet, store=0, timeout=10)
+    # Scan for 15 seconds
+    sniff(iface=iface, prn=handle_packet, store=0, timeout=15)
 
-    # Output dalam format yang mudah diparse
+    # Output in parsable format
     for bssid, (ssid, pmf_status) in found_aps.items():
         print(f"{ssid}|||{bssid}|||{pmf_status}")
 
+def scan_for_target_essid(interface, target_essid):
+    global found_aps
+    found_aps = {}
+
+    print(f"[*] Scanning for target ESSID: '{target_essid}'...")
+    print(f"[*] This will take up to 30 seconds...")
+
+    # Start channel hopping
+    hopper = threading.Thread(target=channel_hopper, args=(interface,), daemon=True)
+    hopper.start()
+
+    # Scan for a longer time (30 seconds)
+    start_time = time.time()
+    max_time = 30  # seconds
+    
+    while time.time() - start_time < max_time:
+        sniff(iface=interface, prn=handle_packet, store=0, timeout=2)
+        
+        # Check if target found
+        for bssid, (ssid, pmf_status) in found_aps.items():
+            if ssid == target_essid:
+                print(f"{ssid}|||{bssid}|||{pmf_status}")
+                return
+    
+    # If we reach here, the target wasn't found
+    print(f"NOT_FOUND|||{target_essid}")
+
 if __name__ == "__main__":
-    if "--scan-once" in sys.argv:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--scan-once', action='store_true', help='Scan once and print all APs')
+    parser.add_argument('--interface', help='Wireless interface in monitor mode')
+    parser.add_argument('--target-essid', help='Target ESSID to look for')
+    parser.add_argument('--extended-scan', action='store_true', help='Perform an extended scan (60 seconds)')
+
+    args = parser.parse_args()
+
+    if args.scan_once:
         scan_once_and_output()
+    elif args.interface and args.target_essid:
+        if args.extended_scan:
+            print("[*] Performing extended 60-second scan...")
+            max_time = 60
+        scan_for_target_essid(args.interface, args.target_essid)
     else:
         main()
-
