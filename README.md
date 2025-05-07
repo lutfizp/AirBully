@@ -93,9 +93,8 @@ In the wireless (air) environment, this tool acts as a "bully" — forcefully ma
 
 ## Current Limitations
 
-- Deauthentication effectiveness is **not optimal yet** (planned fix: enhancing rate and timing control).
 - Attack **only works on networks running WPA3 Transition Mode** — pure WPA3 (SAE-only) networks are not vulnerable.
-- Rogue AP setup uses **static settings** — no automatic dynamic adaptation yet (planned improvements).
+- Attack is **only effective if the target access point does not have Protected Management Frames (PMF) enabled**
 - Manual intervention needed after client scan — future versions may automate capture analysis.
 
 ---
@@ -113,8 +112,7 @@ In the wireless (air) environment, this tool acts as a "bully" — forcefully ma
 
 ---
 # Roadmap (Coming Soon)
-- Full deauthentication optimization (rate-limiting, fake AP beacon tuning).
-- Automatic dynamic Rogue AP parameters (channel mirroring, MAC spoofing).
-- Better client recon and capture automation.
+- PMF detection
+- Better client recon 
 - Full WPA3 SAE attack path research.
 ---
